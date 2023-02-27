@@ -175,11 +175,11 @@ static void powerManage(void)
 			fun.state &= ~FUN_STA_POWER_ON;
 	}
 
-	if (fun.workType != FUN_WORK_TYPE_IDLE) {
+	if ((fun.state & FUN_STA_POWER_ON) && (fun.workType != FUN_WORK_TYPE_IDLE)) {
 		fun.idleTime = FUN_IDLE_SLEEP_TIME;
 	}
 
-	if (fun.idleTime == 0) { // 空闲时间到
+	if (fun.idleTime == 0 && (fun.state & FUN_STA_POWER_ON)) { // 空闲时间到 电源再开启状态
 		fun.state &= ~FUN_STA_POWER_ON; // 关闭电源
 		fun.sleepTime = 100; // 100ms后进入休眠
 	}
@@ -195,49 +195,13 @@ static void powerManage(void)
 			return ;
 		}
 
-		// RCC_APB2PeriphClockCmd(RCC_APB2Periph_USART1, DISABLE);
-		// RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, DISABLE);
-		// RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM4, DISABLE);//关闭1MS定时器
-		// RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1, DISABLE);  
-		// RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, DISABLE);
-		// RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC2, DISABLE);
-		// BOOSTER_DISC_EN();
-		// BOOSTER_AD_DS();
-		// cfsSleep();
-		// ble_sleep();//蓝牙休眠
-		
-		// GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource12);//GPIOB12
-		// GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource15);//GPIOB15
-		
-		// EXTI_InitTypeDef EXTI_InitStructure;
-    	// NVIC_InitTypeDef NVIC_InitStructure;
-		
-		// EXTI_DeInit();
-    
-    	// EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;        //外部按键触发中断
-		// EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;    //下降沿触发
-		// EXTI_InitStructure.EXTI_LineCmd = ENABLE;                  //外部中断使能
-		// EXTI_InitStructure.EXTI_Line = EXTI_Line12;             	//外部中断线号
-		// EXTI_Init(&EXTI_InitStructure);
-		
-		// EXTI_InitStructure.EXTI_Line = EXTI_Line15;             	//外部中断线号
-    	// EXTI_Init(&EXTI_InitStructure);
-		
-		// NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-		// NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-		// NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-		// NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;                  
-		// NVIC_Init(&NVIC_InitStructure);
-		
-		// RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR , ENABLE);//开电源管理时钟PWR_Regulator_LowPower
-		// PWR_WakeUpPinCmd(ENABLE);//使能唤醒引脚，默认PA0
-		// PWR_EnterSTANDBYMode();//进入待机
-		// PWR_EnterSTOPMode(PWR_Regulator_ON,PWR_STOPEntry_WFI|PWR_STOPEntry_WFE);//进入停机
-		// fun.sleepTime = 10000;
-		// while(fun.sleepTime);
-		// __WFI();//进入睡眠模式
+		ble_sleep();
+
+		RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);//开电源管理时钟PWR_Regulator_LowPower
+		PWR_WakeUpPinCmd(ENABLE); // 使能WakeUp引脚唤醒
+		PWR_EnterSTANDBYMode(); // 进入待机模式(最低功耗)
+
 		NVIC_SystemReset();
-		// FUN_LDO_DS();
 		for(int i=0;i<0xFFFFFFFF;i++);
 	}
 }
@@ -252,6 +216,8 @@ static void keyManage(void)
 				FUN_LDO_EN();
 				fun.state = FUN_STA_POWER_ON;
 				fun.lowVoltPormptTime = fun.lowVoltTime = FUN_LOW_VOLT_TIME;
+				fun.idleTime = FUN_IDLE_SLEEP_TIME;
+				trainDecompression();
 				memset(&sendFrame, 0, sizeof(sendFrame));
 			} else {
 				fun.state &= ~FUN_STA_POWER_ON;

@@ -33,7 +33,7 @@ void train_init(void)
 	train.valveTime = 0;
 	HalTimeRegisteringCallbacks(trainTimeCallback, 1);
 	
-	trainDecompression();
+	// trainDecompression();
 }
 
 void train_task(void)

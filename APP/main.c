@@ -22,13 +22,17 @@
 int main (void)
 {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_2);
-	HalSleep();
-	
-	SystemInit();
-	HalSysClockInit();
 	delay_init();
+	
+	// SystemInit();
+	HalSysClockInit();
 	HalTimeInit(72,1000);
-	//HalBuzzerInit();
+	ble_com_init();
+	ble_init();
+	delay_ms(500);
+	// HalSleep();
+
+	// ble_wake();
 	HalKeyInit();
 	HalTimeRegisteringCallbacks(HalKeyTask, 1);
 	
@@ -37,16 +41,10 @@ int main (void)
 	cfsInit();
 	
 	HalFlashFlag();
-	
-	//HalBuzzerSet(2, 150, 70);
-	
 
-	delay_ms(500);
+	// delay_ms(500);
 	
 	fun_init();
-	
-	ble_com_init();
-	ble_init();
 	
 	train_init();
 	impulse_init();
@@ -56,7 +54,7 @@ int main (void)
 	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 	
 	
-	IWDG_Init(IWDG_Prescaler_4, 20000);
+	// IWDG_Init(IWDG_Prescaler_4, 20000);
 	while(1)
 	{
 		fun_task();

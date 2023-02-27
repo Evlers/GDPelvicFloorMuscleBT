@@ -9,7 +9,7 @@ void hal_initialzation(void)
 {
 	GPIO_PinRemapConfig(GPIO_Remap_SWJ_JTAGDisable, ENABLE);
 	HalAdcInit((u8 *)channelTable, (u16 *)&hal.analong, sizeof(channelTable));
-	HalAdc2Init((u8 *)adc2channelTable, sizeof(adc2channelTable));
+	// HalAdc2Init((u8 *)adc2channelTable, sizeof(adc2channelTable));
 }
 
 
@@ -38,11 +38,34 @@ void hal_TIM1_OC_config(u16 period)
 	//GPIO_PinRemapConfig(GPIO_Remap_TIM13, ENABLE);
 	TIM_CtrlPWMOutputs(TIM1, ENABLE);
 	TIM_Cmd(TIM1, ENABLE);
+	hal_TIM1_OC1_duty_set(0);
 }
 
 void hal_TIM1_OC1_duty_set(u16 duty)
 {
-  TIM1->CCR1 = duty;
+	GPIO_InitTypeDef GPIO_InitStruct;
+
+	if (duty) {
+		if (!(TIM1->BDTR & TIM_BDTR_MOE)) {
+			GPIO_InitStruct.GPIO_Mode = GPIO_Mode_AF_PP;
+			GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8;
+			GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+			GPIO_Init(GPIOA, &GPIO_InitStruct);
+			TIM_CtrlPWMOutputs(TIM1, ENABLE);
+		}
+	}
+	else {
+		if (TIM1->BDTR & TIM_BDTR_MOE) {
+			TIM_CtrlPWMOutputs(TIM1, DISABLE);
+			GPIO_InitTypeDef GPIO_InitStruct;
+			GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
+			GPIO_InitStruct.GPIO_Pin = GPIO_Pin_8;
+			GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+			GPIO_Init(GPIOA, &GPIO_InitStruct);
+			GPIO_ResetBits(GPIOA, GPIO_Pin_8);
+		}
+	}
+  	TIM1->CCR1 = duty;
 }
 
 u16 hal_TIM1_OC1_duty_get(void)
@@ -94,135 +117,136 @@ void EXTI15_10_IRQHandler(void)
 	EXTI_ClearFlag(EXTI_Line15);
 }
 
-#define PWR_SLEEPEntry_WFI         ((uint8_t)0x01)
-#define PWR_SLEEPEntry_WFE         ((uint8_t)0x02)
-#define SysCtrl_SLEEPONEXIT_Set    ((u16)0x0002)
-#define SysCtrl_SLEEPDEEP_Set  		 ((u16)0x0004)
+// #define PWR_SLEEPEntry_WFI         ((uint8_t)0x01)
+// #define PWR_SLEEPEntry_WFE         ((uint8_t)0x02)
+// #define SysCtrl_SLEEPONEXIT_Set    ((u16)0x0002)
+// #define SysCtrl_SLEEPDEEP_Set  		 ((u16)0x0004)
 
-static void SetSysClockToHSE(void)
-{
-  __IO uint32_t StartUpCounter = 0, HSEStatus = 0;
+// static void SetSysClockToHSE(void)
+// {
+//   __IO uint32_t StartUpCounter = 0, HSEStatus = 0;
   
-  /* SYSCLK, HCLK, PCLK2 and PCLK1 configuration ---------------------------*/    
-  /* Enable HSE */    
-  RCC->CR |= ((uint32_t)RCC_CR_HSEON);
+//   /* SYSCLK, HCLK, PCLK2 and PCLK1 configuration ---------------------------*/    
+//   /* Enable HSE */    
+//   RCC->CR |= ((uint32_t)RCC_CR_HSEON);
  
-  /* Wait till HSE is ready and if Time out is reached exit */
-  do
-  {
-    HSEStatus = RCC->CR & RCC_CR_HSERDY;
-    StartUpCounter++;  
-  } while((HSEStatus == 0) && (StartUpCounter != HSE_STARTUP_TIMEOUT));
+//   /* Wait till HSE is ready and if Time out is reached exit */
+//   do
+//   {
+//     HSEStatus = RCC->CR & RCC_CR_HSERDY;
+//     StartUpCounter++;  
+//   } while((HSEStatus == 0) && (StartUpCounter != HSE_STARTUP_TIMEOUT));
 
-  if ((RCC->CR & RCC_CR_HSERDY) != RESET)
-  {
-    HSEStatus = (uint32_t)0x01;
-  }
-  else
-  {
-    HSEStatus = (uint32_t)0x00;
-  }  
+//   if ((RCC->CR & RCC_CR_HSERDY) != RESET)
+//   {
+//     HSEStatus = (uint32_t)0x01;
+//   }
+//   else
+//   {
+//     HSEStatus = (uint32_t)0x00;
+//   }  
 
-  if (HSEStatus == (uint32_t)0x01)
-  {
+//   if (HSEStatus == (uint32_t)0x01)
+//   {
 
-#if !defined STM32F10X_LD_VL && !defined STM32F10X_MD_VL && !defined STM32F10X_HD_VL
-    /* Enable Prefetch Buffer */
-    FLASH->ACR |= FLASH_ACR_PRFTBE;
+// #if !defined STM32F10X_LD_VL && !defined STM32F10X_MD_VL && !defined STM32F10X_HD_VL
+//     /* Enable Prefetch Buffer */
+//     FLASH->ACR |= FLASH_ACR_PRFTBE;
 
-    /* Flash 0 wait state */
-    FLASH->ACR &= (uint32_t)((uint32_t)~FLASH_ACR_LATENCY);
+//     /* Flash 0 wait state */
+//     FLASH->ACR &= (uint32_t)((uint32_t)~FLASH_ACR_LATENCY);
 
-#ifndef STM32F10X_CL
-    FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_0;
-#else
-    if (HSE_VALUE <= 24000000)
-	{
-      FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_0;
-	}
-	else
-	{
-      FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_1;
-	}
-#endif /* STM32F10X_CL */
-#endif
+// #ifndef STM32F10X_CL
+//     FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_0;
+// #else
+//     if (HSE_VALUE <= 24000000)
+// 	{
+//       FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_0;
+// 	}
+// 	else
+// 	{
+//       FLASH->ACR |= (uint32_t)FLASH_ACR_LATENCY_1;
+// 	}
+// #endif /* STM32F10X_CL */
+// #endif
  
-    /* HCLK = SYSCLK */
-    RCC->CFGR |= (uint32_t)RCC_CFGR_HPRE_DIV1;
+//     /* HCLK = SYSCLK */
+//     RCC->CFGR |= (uint32_t)RCC_CFGR_HPRE_DIV1;
       
-    /* PCLK2 = HCLK */
-    RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE2_DIV1;
+//     /* PCLK2 = HCLK */
+//     RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE2_DIV1;
     
-    /* PCLK1 = HCLK */
-    RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE1_DIV1;
+//     /* PCLK1 = HCLK */
+//     RCC->CFGR |= (uint32_t)RCC_CFGR_PPRE1_DIV1;
     
-    /* Select HSE as system clock source */
-    RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));
-    RCC->CFGR |= (uint32_t)RCC_CFGR_SW_HSE;    
+//     /* Select HSE as system clock source */
+//     RCC->CFGR &= (uint32_t)((uint32_t)~(RCC_CFGR_SW));
+//     RCC->CFGR |= (uint32_t)RCC_CFGR_SW_HSE;    
 
-    /* Wait till HSE is used as system clock source */
-    while ((RCC->CFGR & (uint32_t)RCC_CFGR_SWS) != (uint32_t)0x04)
-    {
-    }
-  }
-  else
-  { /* If HSE fails to start-up, the application will have wrong clock 
-         configuration. User can add here some code to deal with this error */
-  }  
-}
+//     /* Wait till HSE is used as system clock source */
+//     while ((RCC->CFGR & (uint32_t)RCC_CFGR_SWS) != (uint32_t)0x04)
+//     {
+//     }
+//   }
+//   else
+//   { /* If HSE fails to start-up, the application will have wrong clock 
+//          configuration. User can add here some code to deal with this error */
+//   }  
+// }
 
-static void HalMinSystemClock(void)
-{
-	/* Reset the RCC clock configuration to the default reset state(for debug purpose) */
-  /* Set HSION bit */
-  RCC->CR |= (uint32_t)0x00000001;
+// static void HalMinSystemClock(void)
+// {
+// 	/* Reset the RCC clock configuration to the default reset state(for debug purpose) */
+//   /* Set HSION bit */
+//   RCC->CR |= (uint32_t)0x00000001;
 
-  /* Reset SW, HPRE, PPRE1, PPRE2, ADCPRE and MCO bits */
-#ifndef STM32F10X_CL
-  RCC->CFGR &= (uint32_t)0xF8FF0000;
-#else
-  RCC->CFGR &= (uint32_t)0xF0FF0000;
-#endif /* STM32F10X_CL */   
+//   /* Reset SW, HPRE, PPRE1, PPRE2, ADCPRE and MCO bits */
+// #ifndef STM32F10X_CL
+//   RCC->CFGR &= (uint32_t)0xF8FF0000;
+// #else
+//   RCC->CFGR &= (uint32_t)0xF0FF0000;
+// #endif /* STM32F10X_CL */   
   
-  /* Reset HSEON, CSSON and PLLON bits */
-  RCC->CR &= (uint32_t)0xFEF6FFFF;
+//   /* Reset HSEON, CSSON and PLLON bits */
+//   RCC->CR &= (uint32_t)0xFEF6FFFF;
 
-  /* Reset HSEBYP bit */
-  RCC->CR &= (uint32_t)0xFFFBFFFF;
+//   /* Reset HSEBYP bit */
+//   RCC->CR &= (uint32_t)0xFFFBFFFF;
 
-  /* Reset PLLSRC, PLLXTPRE, PLLMUL and USBPRE/OTGFSPRE bits */
-  RCC->CFGR &= (uint32_t)0xFF80FFFF;
+//   /* Reset PLLSRC, PLLXTPRE, PLLMUL and USBPRE/OTGFSPRE bits */
+//   RCC->CFGR &= (uint32_t)0xFF80FFFF;
 
-#ifdef STM32F10X_CL
-  /* Reset PLL2ON and PLL3ON bits */
-  RCC->CR &= (uint32_t)0xEBFFFFFF;
+// #ifdef STM32F10X_CL
+//   /* Reset PLL2ON and PLL3ON bits */
+//   RCC->CR &= (uint32_t)0xEBFFFFFF;
 
-  /* Disable all interrupts and clear pending bits  */
-  RCC->CIR = 0x00FF0000;
+//   /* Disable all interrupts and clear pending bits  */
+//   RCC->CIR = 0x00FF0000;
 
-  /* Reset CFGR2 register */
-  RCC->CFGR2 = 0x00000000;
-#elif defined (STM32F10X_LD_VL) || defined (STM32F10X_MD_VL) || (defined STM32F10X_HD_VL)
-  /* Disable all interrupts and clear pending bits  */
-  RCC->CIR = 0x009F0000;
+//   /* Reset CFGR2 register */
+//   RCC->CFGR2 = 0x00000000;
+// #elif defined (STM32F10X_LD_VL) || defined (STM32F10X_MD_VL) || (defined STM32F10X_HD_VL)
+//   /* Disable all interrupts and clear pending bits  */
+//   RCC->CIR = 0x009F0000;
 
-  /* Reset CFGR2 register */
-  RCC->CFGR2 = 0x00000000;      
-#else
-  /* Disable all interrupts and clear pending bits  */
-  RCC->CIR = 0x009F0000;
-#endif /* STM32F10X_CL */
+//   /* Reset CFGR2 register */
+//   RCC->CFGR2 = 0x00000000;      
+// #else
+//   /* Disable all interrupts and clear pending bits  */
+//   RCC->CIR = 0x009F0000;
+// #endif /* STM32F10X_CL */
     
-#if defined (STM32F10X_HD) || (defined STM32F10X_XL) || (defined STM32F10X_HD_VL)
-  #ifdef DATA_IN_ExtSRAM
-    SystemInit_ExtMemCtl(); 
-  #endif /* DATA_IN_ExtSRAM */
-#endif 
+// #if defined (STM32F10X_HD) || (defined STM32F10X_XL) || (defined STM32F10X_HD_VL)
+//   #ifdef DATA_IN_ExtSRAM
+//     SystemInit_ExtMemCtl(); 
+//   #endif /* DATA_IN_ExtSRAM */
+// #endif 
 
-	SetSysClockToHSE();
-}
+// 	SetSysClockToHSE();
+// }
 #include "fun.h"
 #include "ble.h"
+#include "delay.h"
 
 void HalSleep(void)
 {
@@ -247,45 +271,23 @@ void HalSleep(void)
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(GPIOB,&GPIO_InitStruct);
 	
-	GPIO_InitStruct.GPIO_Pin = BLE_WAKE_PIN | BLE_RESET_PIN;
-	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
-	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
-	GPIO_Init(BLE_GPIO_PORT, &GPIO_InitStruct);
-	
-	BLE_RESET_CLR;
-	BLE_WAKE_SET;
-	
-	// GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource12);//GPIOB12
-	// GPIO_EXTILineConfig(GPIO_PortSourceGPIOB, GPIO_PinSource15);//GPIOB15
-	
-	// EXTI_InitTypeDef EXTI_InitStructure;
-	// NVIC_InitTypeDef NVIC_InitStructure;
-	
-	// EXTI_DeInit();
-	
-	// EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;        //外部按键触发中断
-	// EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Falling;    //下降沿触发
-	// EXTI_InitStructure.EXTI_LineCmd = ENABLE;                  //外部中断使能
-	// EXTI_InitStructure.EXTI_Line = EXTI_Line12;             	//外部中断线号
-	// EXTI_Init(&EXTI_InitStructure);
-	
-	// EXTI_InitStructure.EXTI_Line = EXTI_Line15;             	//外部中断线号
-	// EXTI_Init(&EXTI_InitStructure);
-	
-	// NVIC_InitStructure.NVIC_IRQChannelCmd = ENABLE;
-	// NVIC_InitStructure.NVIC_IRQChannelSubPriority = 0;
-	// NVIC_InitStructure.NVIC_IRQChannelPreemptionPriority = 0;
-	// NVIC_InitStructure.NVIC_IRQChannel = EXTI15_10_IRQn;                  
-	// NVIC_Init(&NVIC_InitStructure);
-	
-	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);//开电源管理时钟PWR_Regulator_LowPower
-	if(!(HAL_KEY_PORT & HAL_KEY_SW_ALL)){
+	// GPIO_InitStruct.GPIO_Pin = BLE_WAKE_PIN | BLE_RESET_PIN;
+	// GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
+	// GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+	// GPIO_Init(BLE_GPIO_PORT, &GPIO_InitStruct);
+
+	if(!(HAL_KEY_PORT & HAL_KEY_SW_ALL)) {
 		return ;
 	}
-	HalMinSystemClock();
+	
+	ble_sleep();
+
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_PWR | RCC_APB1Periph_BKP, ENABLE);//开电源管理时钟PWR_Regulator_LowPower
 	PWR_WakeUpPinCmd(ENABLE); // 使能WakeUp引脚唤醒
 	PWR_EnterSTANDBYMode(); // 进入待机模式(最低功耗)
-	__WFI();
+	// __WFI();
+
+	// NVIC_SystemReset();
 }
 
 //初始化独立看门狗

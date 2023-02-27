@@ -21,6 +21,11 @@ void impulse_init(void)
 	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
 	GPIO_Init(IMPULSE_PWM_PORT, &GPIO_InitStruct);
 	
+	GPIO_InitStruct.GPIO_Pin = IMPULSE_OP_PIN;
+	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_IN_FLOATING;
+	GPIO_InitStruct.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(IMPULSE_OP_PORT, &GPIO_InitStruct);
+
 	//测试IO
 	GPIO_InitStruct.GPIO_Pin = GPIO_Pin_12;
 	GPIO_InitStruct.GPIO_Mode = GPIO_Mode_Out_PP;
@@ -99,9 +104,7 @@ bool impulse_load_is_null(void)
 
 static void loadCheck(void)
 {
-	u16 out_volt = HalAdc2Read(0);
-	
-	if(out_volt < 500){
+	if(!IMPULSE_OP_GET()){
 		if(impulse.nullLoadCnt < 0xFF)
 			impulse.nullLoadCnt ++;
 	} else {

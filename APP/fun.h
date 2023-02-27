@@ -16,9 +16,8 @@
 #define LEDB_PIN						GPIO_Pin_4
 #define LEDC_PIN						GPIO_Pin_5
 #define LEDD_PIN						GPIO_Pin_6
-#define LEDE_PIN						GPIO_Pin_7
 #define LEDF_PIN						GPIO_Pin_10
-#define LED_ALL_PIN					(LEDA_PIN | LEDB_PIN | LEDC_PIN | LEDD_PIN | LEDE_PIN | LEDF_PIN)
+#define LED_ALL_PIN					(LEDA_PIN | LEDB_PIN | LEDC_PIN | LEDD_PIN | LEDF_PIN)
 #define LED_ALL_ON()				LED_PORT->ODR &= ~LED_ALL_PIN
 #define LED_ALL_OFF()				LED_PORT->ODR |= LED_ALL_PIN
 

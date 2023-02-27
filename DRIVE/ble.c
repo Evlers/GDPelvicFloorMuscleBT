@@ -22,7 +22,7 @@ void ble_init(void)
 	BLE_WAKE_CLR;
 	
 	BLE_RESET_CLR;
-	delay_ms(500);
+	delay_ms(100);
 	BLE_RESET_SET;
 	
 	HalUSARTInit(BLE_USART_PORT, 57600, usartIdleCallback);
@@ -46,14 +46,23 @@ void ble_task(void)
 
 void ble_sleep(void)
 {
+	BLE_RESET_CLR;
+	delay_ms(100);
+	BLE_RESET_SET;
+	delay_ms(200);
 	HalUSARTString(BLE_USART_PORT, "+++a\r\n");
-	HalUSARTString(BLE_USART_PORT, "AT+DEEPSLEEP\r\n");
+	delay_ms(200);
 	BLE_WAKE_SET;
+	HalUSARTString(BLE_USART_PORT, "AT+HIBERNATE\r\n");
+	delay_ms(1000); // 等待DMA发送完毕
 }
 
 void ble_wake(void)
 {
 	BLE_WAKE_CLR;
+	delay_ms(200);
+	HalUSARTString(BLE_USART_PORT, "AT+Z\r\n");
+	delay_ms(200);
 }
 
 void ble_send(u8 *data, u16 len)

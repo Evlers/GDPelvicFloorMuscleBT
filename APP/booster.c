@@ -52,23 +52,27 @@ void booster_volt_set(u8 volt)
 
 q15 PidComputeQ15(q15 err, pid_q15_type *pid)
 {
- s32 tmp; 
- //integral
- tmp = ((s32)err * pid->ki) >> 15;
- tmp = tmp > FUNC_PID_SINGLE_INTEGRAL_MAX ? FUNC_PID_SINGLE_INTEGRAL_MAX+pid->f : tmp+pid->f;
- if(tmp > _IQ15(1.0))
-  pid->f = _IQ15(1.0);
- else if(tmp < _IQ15(-1.0))
-  pid->f = _IQ15(-1.0);
- else
-  pid->f = tmp;
- tmp = pid->f;
- tmp += ((s32)err * pid->kp) >> 15; //scale
- //tmp += (s32)(err - pid->errl) * pid->kd / IQ15(1.0);  //differential
- pid->errl = err;
- if(tmp > _IQ15(1.0)) tmp = _IQ15(1.0);
- else if(tmp < 0) tmp = 0;
- return (q15)tmp;
+	s32 tmp; 
+	//integral
+	tmp = ((s32)err * pid->ki) >> 15;
+	tmp = tmp > FUNC_PID_SINGLE_INTEGRAL_MAX ? FUNC_PID_SINGLE_INTEGRAL_MAX+pid->f : tmp+pid->f;
+	
+	if(tmp > _IQ15(1.0))
+		pid->f = _IQ15(1.0);
+	else if(tmp < _IQ15(-1.0))
+		pid->f = _IQ15(-1.0);
+	else
+		pid->f = tmp;
+	
+	tmp = pid->f;
+	tmp += ((s32)err * pid->kp) >> 15; //scale
+	//tmp += (s32)(err - pid->errl) * pid->kd / IQ15(1.0);  //differential
+	pid->errl = err;
+
+	if(tmp > _IQ15(1.0)) tmp = _IQ15(1.0);
+	else if(tmp < 0) tmp = 0;
+	
+	return (q15)tmp;
 }
 
 volatile float booster_volt;
